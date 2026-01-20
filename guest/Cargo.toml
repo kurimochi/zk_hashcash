@@ -1,0 +1,9 @@
+[package]
+name = "hashcash-guest"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hashcash-lib = { workspace = true }
+sha2 = { workspace = true }
+sp1-zkvm = { workspace = true }
