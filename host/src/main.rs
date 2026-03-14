@@ -4,7 +4,7 @@ use clap::{Parser, ValueEnum};
 use env_logger::Env;
 use hashcash_lib::{calc_hash, public_values::HashCashPublicValues};
 use log::info;
-use sp1_sdk::{HashableKey, ProverClient, SP1Stdin, include_elf};
+use sp1_sdk::{HashableKey, ProveRequest, Prover, ProverClient, ProvingKey, SP1Stdin, include_elf};
 use std::error::Error;
 
 use crate::nonce::search_nonce;
@@ -54,7 +54,8 @@ struct Cli {
     proof: ProofType,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init_from_env(Env::new().default_filter_or("info"));
 
     let args = Cli::parse();
@@ -81,17 +82,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     // zkVM phase
     info!("Proving on zkVM...");
 
-    const ELF: &[u8] = include_elf!("hashcash-guest");
+    const ELF: sp1_sdk::Elf = include_elf!("hashcash-guest");
 
     let mut stdin = SP1Stdin::new();
     stdin.write(&message);
     stdin.write(&nonce);
     stdin.write(&args.difficulty);
 
-    let client = ProverClient::from_env();
-    let (pk, vk) = client.setup(ELF);
+    let client = ProverClient::from_env().await;
+    let pk = client.setup(ELF).await?;
 
-    let mut prover = client.prove(&pk, &stdin);
+    let mut prover = client.prove(&pk, stdin);
     prover = match args.proof {
         ProofType::Compressed => prover.compressed(),
         ProofType::Groth16 => prover.groth16(),
@@ -99,10 +100,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         _ => prover,
     };
     info!("Proof type: {:?}", args.proof);
-    let mut proof = prover.run().unwrap();
+    let mut proof = prover.await?;
 
+    let vk = pk.verifying_key();
     info!("Verifying...");
-    client.verify(&proof, &vk)?;
+    client.verify(&proof, vk, None)?;
 
     let public = proof.public_values.read::<HashCashPublicValues>();
     assert!(public.is_valid, "The nonce is invalid");
