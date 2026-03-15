@@ -5,6 +5,7 @@ use sha3::{Keccak256, Keccak512};
 pub mod public_values;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum HashAlgorithm {
     Sha256,
     Sha512,
