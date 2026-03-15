@@ -84,6 +84,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         HashAlgorithmCli::Keccak512 => HashAlgorithm::Keccak512,
     };
 
+    let max_difficulty = match hash_algorithm {
+        HashAlgorithm::Sha256 | HashAlgorithm::Keccak256 => 256,
+        HashAlgorithm::Sha512 | HashAlgorithm::Keccak512 => 512,
+    };
+    assert!(
+        args.difficulty <= max_difficulty,
+        "Difficulty cannot exceed {}",
+        max_difficulty
+    );
+
     if message.len() < 2048 {
         info!("Message: 0x{}", hex::encode(&message));
     }
