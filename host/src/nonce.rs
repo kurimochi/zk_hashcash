@@ -49,6 +49,14 @@ pub fn search_nonce(
     starting_point: Option<u128>,
     algorithm: HashAlgorithm,
 ) -> u128 {
+    assert!(
+        difficulty <= algorithm.max_difficulty(),
+        "difficulty {} exceeds {} max difficulty {}",
+        difficulty,
+        algorithm.as_str(),
+        algorithm.max_difficulty(),
+    );
+
     dispatch_hash_algorithm!(
         algorithm,
         search_nonce_with_hasher,
