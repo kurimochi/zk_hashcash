@@ -32,6 +32,17 @@ enum HashAlgorithmCli {
     Keccak512,
 }
 
+impl From<HashAlgorithmCli> for HashAlgorithm {
+    fn from(value: HashAlgorithmCli) -> Self {
+        match value {
+            HashAlgorithmCli::Sha256 => HashAlgorithm::Sha256,
+            HashAlgorithmCli::Sha512 => HashAlgorithm::Sha512,
+            HashAlgorithmCli::Keccak256 => HashAlgorithm::Keccak256,
+            HashAlgorithmCli::Keccak512 => HashAlgorithm::Keccak512,
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -77,17 +88,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         InputType::String => args.message.into_bytes(),
     };
 
-    let hash_algorithm = match args.hash {
-        HashAlgorithmCli::Sha256 => HashAlgorithm::Sha256,
-        HashAlgorithmCli::Sha512 => HashAlgorithm::Sha512,
-        HashAlgorithmCli::Keccak256 => HashAlgorithm::Keccak256,
-        HashAlgorithmCli::Keccak512 => HashAlgorithm::Keccak512,
-    };
+    let hash_algorithm: HashAlgorithm = args.hash.into();
 
-    let max_difficulty = match hash_algorithm {
-        HashAlgorithm::Sha256 | HashAlgorithm::Keccak256 => 256,
-        HashAlgorithm::Sha512 | HashAlgorithm::Keccak512 => 512,
-    };
+    let max_difficulty = hash_algorithm.max_difficulty();
     assert!(
         args.difficulty <= max_difficulty,
         "Difficulty cannot exceed {}",
@@ -161,12 +164,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let private_json = serde_json::json!({
             "nonce": nonce,
             "hash": hex::encode(calc_hash(&message, nonce, hash_algorithm)),
-            "hash_algorithm": match hash_algorithm {
-                HashAlgorithm::Sha256 => "sha256",
-                HashAlgorithm::Sha512 => "sha512",
-                HashAlgorithm::Keccak256 => "keccak256",
-                HashAlgorithm::Keccak512 => "keccak512",
-            },
+            "hash_algorithm": hash_algorithm.as_str(),
         });
 
         std::fs::write(public_path, public_json.to_string())?;

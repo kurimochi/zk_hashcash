@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256, Sha512};
-use sha3::{Keccak256, Keccak512};
+use sha2::Digest;
 
 pub mod public_values;
 
@@ -11,6 +10,18 @@ pub enum HashAlgorithm {
     Sha512,
     Keccak256,
     Keccak512,
+}
+
+#[macro_export]
+macro_rules! dispatch_hash_algorithm {
+    ($algorithm:expr, $f:ident $(, $args:expr)* $(,)?) => {
+        match $algorithm {
+            $crate::HashAlgorithm::Sha256 => $f::<sha2::Sha256>($($args),*),
+            $crate::HashAlgorithm::Sha512 => $f::<sha2::Sha512>($($args),*),
+            $crate::HashAlgorithm::Keccak256 => $f::<sha3::Keccak256>($($args),*),
+            $crate::HashAlgorithm::Keccak512 => $f::<sha3::Keccak512>($($args),*),
+        }
+    };
 }
 
 pub fn check_hash(hash: &[u8], difficulty: u32) -> bool {
@@ -41,30 +52,34 @@ pub fn check_hash(hash: &[u8], difficulty: u32) -> bool {
 }
 
 pub fn calc_hash(message: &[u8], nonce: u128, algorithm: HashAlgorithm) -> Vec<u8> {
-    match algorithm {
-        HashAlgorithm::Sha256 => {
-            let mut hasher = Sha256::new();
-            hasher.update(message);
-            hasher.update(&nonce.to_be_bytes());
-            hasher.finalize().to_vec()
+    algorithm.hash(message, nonce)
+}
+
+fn hash_with<H: Digest>(message: &[u8], nonce: u128) -> Vec<u8> {
+    let mut hasher = H::new();
+    hasher.update(message);
+    hasher.update(&nonce.to_be_bytes());
+    hasher.finalize().to_vec()
+}
+
+impl HashAlgorithm {
+    pub fn hash(self, message: &[u8], nonce: u128) -> Vec<u8> {
+        dispatch_hash_algorithm!(self, hash_with, message, nonce)
+    }
+
+    pub fn max_difficulty(self) -> u32 {
+        match self {
+            HashAlgorithm::Sha256 | HashAlgorithm::Keccak256 => 256,
+            HashAlgorithm::Sha512 | HashAlgorithm::Keccak512 => 512,
         }
-        HashAlgorithm::Sha512 => {
-            let mut hasher = Sha512::new();
-            hasher.update(message);
-            hasher.update(&nonce.to_be_bytes());
-            hasher.finalize().to_vec()
-        }
-        HashAlgorithm::Keccak256 => {
-            let mut hasher = Keccak256::new();
-            hasher.update(message);
-            hasher.update(&nonce.to_be_bytes());
-            hasher.finalize().to_vec()
-        }
-        HashAlgorithm::Keccak512 => {
-            let mut hasher = Keccak512::new();
-            hasher.update(message);
-            hasher.update(&nonce.to_be_bytes());
-            hasher.finalize().to_vec()
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HashAlgorithm::Sha256 => "sha256",
+            HashAlgorithm::Sha512 => "sha512",
+            HashAlgorithm::Keccak256 => "keccak256",
+            HashAlgorithm::Keccak512 => "keccak512",
         }
     }
 }
