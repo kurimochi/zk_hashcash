@@ -3,6 +3,12 @@ use sha2::Digest;
 
 pub mod public_values;
 
+#[doc(hidden)]
+pub mod __hashers {
+    pub use sha2;
+    pub use sha3;
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HashAlgorithm {
@@ -16,10 +22,10 @@ pub enum HashAlgorithm {
 macro_rules! dispatch_hash_algorithm {
     ($algorithm:expr, $f:ident $(, $args:expr)* $(,)?) => {
         match $algorithm {
-            $crate::HashAlgorithm::Sha256 => $f::<sha2::Sha256>($($args),*),
-            $crate::HashAlgorithm::Sha512 => $f::<sha2::Sha512>($($args),*),
-            $crate::HashAlgorithm::Keccak256 => $f::<sha3::Keccak256>($($args),*),
-            $crate::HashAlgorithm::Keccak512 => $f::<sha3::Keccak512>($($args),*),
+            $crate::HashAlgorithm::Sha256 => $f::<$crate::__hashers::sha2::Sha256>($($args),*),
+            $crate::HashAlgorithm::Sha512 => $f::<$crate::__hashers::sha2::Sha512>($($args),*),
+            $crate::HashAlgorithm::Keccak256 => $f::<$crate::__hashers::sha3::Keccak256>($($args),*),
+            $crate::HashAlgorithm::Keccak512 => $f::<$crate::__hashers::sha3::Keccak512>($($args),*),
         }
     };
 }
