@@ -149,6 +149,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let private_json = serde_json::json!({
             "nonce": nonce,
             "hash": hex::encode(calc_hash(&message, nonce, hash_algorithm)),
+            "hash_algorithm": match hash_algorithm {
+                HashAlgorithm::Sha256 => "sha256",
+                HashAlgorithm::Sha512 => "sha512",
+                HashAlgorithm::Keccak256 => "keccak256",
+                HashAlgorithm::Keccak512 => "keccak512",
+            },
         });
 
         std::fs::write(public_path, public_json.to_string())?;
