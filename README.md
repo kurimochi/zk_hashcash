@@ -25,6 +25,8 @@ Options:
 
       --proof <PROOF>
           [default: raw] [possible values: raw, compressed, groth16, plonk]
+      --hash <HASH>
+          [default: sha256] [possible values: sha256, sha512, keccak256, keccak512]
   -h, --help
           Print help
   -V, --version
