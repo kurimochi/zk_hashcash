@@ -109,6 +109,7 @@ fn search_nonce_with_hasher<H: Digest + Clone + Send + 'static>(
             }
         });
     }
+    drop(tx);
 
     rx.recv().unwrap()
 }
