@@ -1,15 +1,15 @@
 use std::{
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc,
+        mpsc, Arc,
     },
     thread,
 };
 
-use hashcash_lib::check_hash;
+use hashcash_lib::{check_hash, HashAlgorithm};
 use log::info;
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, Sha512};
+use sha3::{Keccak256, Keccak512};
 
 // pub fn search_nonce(message: &[u8], difficulty: u32, starting_point: Option<u128>) -> u128 {
 //     let mut nonce_count: u128 = starting_point.unwrap_or(0);
@@ -43,10 +43,36 @@ use sha2::{Digest, Sha256};
 //     nonce_count
 // }
 
-pub fn search_nonce(message: &[u8], difficulty: u32, starting_point: Option<u128>) -> u128 {
+pub fn search_nonce(
+    message: &[u8],
+    difficulty: u32,
+    starting_point: Option<u128>,
+    algorithm: HashAlgorithm,
+) -> u128 {
+    match algorithm {
+        HashAlgorithm::Sha256 => {
+            search_nonce_with_hasher::<Sha256>(message, difficulty, starting_point)
+        }
+        HashAlgorithm::Sha512 => {
+            search_nonce_with_hasher::<Sha512>(message, difficulty, starting_point)
+        }
+        HashAlgorithm::Keccak256 => {
+            search_nonce_with_hasher::<Keccak256>(message, difficulty, starting_point)
+        }
+        HashAlgorithm::Keccak512 => {
+            search_nonce_with_hasher::<Keccak512>(message, difficulty, starting_point)
+        }
+    }
+}
+
+fn search_nonce_with_hasher<H: Digest + Clone + Send + 'static>(
+    message: &[u8],
+    difficulty: u32,
+    starting_point: Option<u128>,
+) -> u128 {
     let start: u128 = starting_point.unwrap_or(0);
 
-    let mut mid = Sha256::new();
+    let mut mid = H::new();
     mid.update(message);
 
     let threads = num_cpus::get();
