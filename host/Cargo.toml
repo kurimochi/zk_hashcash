@@ -12,6 +12,7 @@ log = { workspace = true }
 num_cpus = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+sha3 = { workspace = true }
 sp1-sdk = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 

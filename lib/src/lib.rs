@@ -1,6 +1,34 @@
-use sha2::{Digest, Sha256};
+use serde::{Deserialize, Serialize};
+use sha2::Digest;
 
 pub mod public_values;
+
+#[doc(hidden)]
+pub mod __hashers {
+    pub use sha2;
+    pub use sha3;
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum HashAlgorithm {
+    Sha256,
+    Sha512,
+    Keccak256,
+    Keccak512,
+}
+
+#[macro_export]
+macro_rules! dispatch_hash_algorithm {
+    ($algorithm:expr, $f:ident $(, $args:expr)* $(,)?) => {
+        match $algorithm {
+            $crate::HashAlgorithm::Sha256 => $f::<$crate::__hashers::sha2::Sha256>($($args),*),
+            $crate::HashAlgorithm::Sha512 => $f::<$crate::__hashers::sha2::Sha512>($($args),*),
+            $crate::HashAlgorithm::Keccak256 => $f::<$crate::__hashers::sha3::Keccak256>($($args),*),
+            $crate::HashAlgorithm::Keccak512 => $f::<$crate::__hashers::sha3::Keccak512>($($args),*),
+        }
+    };
+}
 
 pub fn check_hash(hash: &[u8], difficulty: u32) -> bool {
     // difficulty check
@@ -29,9 +57,35 @@ pub fn check_hash(hash: &[u8], difficulty: u32) -> bool {
     true
 }
 
-pub fn calc_hash(message: &[u8], nonce: u128) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    hasher.update(&message);
+pub fn calc_hash(message: &[u8], nonce: u128, algorithm: HashAlgorithm) -> Vec<u8> {
+    algorithm.hash(message, nonce)
+}
+
+fn hash_with<H: Digest>(message: &[u8], nonce: u128) -> Vec<u8> {
+    let mut hasher = H::new();
+    hasher.update(message);
     hasher.update(&nonce.to_be_bytes());
     hasher.finalize().to_vec()
+}
+
+impl HashAlgorithm {
+    pub fn hash(self, message: &[u8], nonce: u128) -> Vec<u8> {
+        dispatch_hash_algorithm!(self, hash_with, message, nonce)
+    }
+
+    pub fn max_difficulty(self) -> u32 {
+        match self {
+            HashAlgorithm::Sha256 | HashAlgorithm::Keccak256 => 256,
+            HashAlgorithm::Sha512 | HashAlgorithm::Keccak512 => 512,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HashAlgorithm::Sha256 => "sha256",
+            HashAlgorithm::Sha512 => "sha512",
+            HashAlgorithm::Keccak256 => "keccak256",
+            HashAlgorithm::Keccak512 => "keccak512",
+        }
+    }
 }

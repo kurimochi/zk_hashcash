@@ -7,46 +7,41 @@ use std::{
     thread,
 };
 
-use hashcash_lib::check_hash;
+use hashcash_lib::{HashAlgorithm, check_hash, dispatch_hash_algorithm};
 use log::info;
-use sha2::{Digest, Sha256};
+use sha2::Digest;
 
-// pub fn search_nonce(message: &[u8], difficulty: u32, starting_point: Option<u128>) -> u128 {
-//     let mut nonce_count: u128 = starting_point.unwrap_or(0);
+pub fn search_nonce(
+    message: &[u8],
+    difficulty: u32,
+    starting_point: Option<u128>,
+    algorithm: HashAlgorithm,
+) -> u128 {
+    assert!(
+        difficulty <= algorithm.max_difficulty(),
+        "difficulty {} exceeds {} max difficulty {}",
+        difficulty,
+        algorithm.as_str(),
+        algorithm.max_difficulty(),
+    );
 
-//     let mut mid = Sha256::new();
-//     mid.update(message);
+    dispatch_hash_algorithm!(
+        algorithm,
+        search_nonce_with_hasher,
+        message,
+        difficulty,
+        starting_point,
+    )
+}
 
-//     loop {
-//         if nonce_count % 1_000_000 == 0 {
-//             info!("Trying nonce {}", nonce_count);
-//         }
-
-//         let mut hasher = mid.clone();
-//         hasher.update(&nonce_count.to_be_bytes());
-//         let hash = hasher.finalize();
-
-//         match check_hash(&hash, difficulty) {
-//             Ok(hash) => {
-//                 info!(
-//                     "The hash {} was successfully computed using nonce {}!",
-//                     hex::encode(hash),
-//                     nonce_count
-//                 );
-//                 break;
-//             }
-//             Err(_) => {
-//                 nonce_count += 1;
-//             }
-//         }
-//     }
-//     nonce_count
-// }
-
-pub fn search_nonce(message: &[u8], difficulty: u32, starting_point: Option<u128>) -> u128 {
+fn search_nonce_with_hasher<H: Digest + Clone + Send + 'static>(
+    message: &[u8],
+    difficulty: u32,
+    starting_point: Option<u128>,
+) -> u128 {
     let start: u128 = starting_point.unwrap_or(0);
 
-    let mut mid = Sha256::new();
+    let mut mid = H::new();
     mid.update(message);
 
     let threads = num_cpus::get();
@@ -82,6 +77,7 @@ pub fn search_nonce(message: &[u8], difficulty: u32, starting_point: Option<u128
             }
         });
     }
+    drop(tx);
 
     rx.recv().unwrap()
 }

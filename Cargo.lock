@@ -1594,6 +1594,7 @@ dependencies = [
  "num_cpus",
  "serde_json",
  "sha2",
+ "sha3",
  "sp1-build",
  "sp1-sdk",
  "tokio",
@@ -1606,6 +1607,7 @@ dependencies = [
  "hex",
  "serde",
  "sha2",
+ "sha3",
 ]
 
 [[package]]
@@ -3683,7 +3685,7 @@ checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 [[package]]
 name = "sha2"
 version = "0.10.9"
-source = "git+https://github.com/sp1-patches/RustCrypto-hashes?tag=patch-sha2-0.10.9-sp1-4.0.0#0b1945eea7d9a776fd6e50ffd5fc51f0c5e6f155"
+source = "git+https://github.com/sp1-patches/RustCrypto-hashes?tag=patch-sha2-0.10.9-sp1-6.0.0#e48b656ebc806117554bb33c2f8687e4637e37ff"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -3693,8 +3695,7 @@ dependencies = [
 [[package]]
 name = "sha3"
 version = "0.10.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
+source = "git+https://github.com/sp1-patches/RustCrypto-hashes?tag=patch-sha3-0.10.8-sp1-6.0.0#0a16ae7acd5cd5fbb432d884bd4aae2764a18cf7"
 dependencies = [
  "digest",
  "keccak",

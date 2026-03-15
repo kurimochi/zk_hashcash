@@ -2,7 +2,7 @@ mod nonce;
 
 use clap::{Parser, ValueEnum};
 use env_logger::Env;
-use hashcash_lib::{calc_hash, public_values::HashCashPublicValues};
+use hashcash_lib::{HashAlgorithm, calc_hash, public_values::HashCashPublicValues};
 use log::info;
 use sp1_sdk::{HashableKey, ProveRequest, Prover, ProverClient, ProvingKey, SP1Stdin, include_elf};
 use std::error::Error;
@@ -22,6 +22,25 @@ enum ProofType {
     Compressed,
     Groth16,
     Plonk,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum HashAlgorithmCli {
+    Sha256,
+    Sha512,
+    Keccak256,
+    Keccak512,
+}
+
+impl From<HashAlgorithmCli> for HashAlgorithm {
+    fn from(value: HashAlgorithmCli) -> Self {
+        match value {
+            HashAlgorithmCli::Sha256 => HashAlgorithm::Sha256,
+            HashAlgorithmCli::Sha512 => HashAlgorithm::Sha512,
+            HashAlgorithmCli::Keccak256 => HashAlgorithm::Keccak256,
+            HashAlgorithmCli::Keccak512 => HashAlgorithm::Keccak512,
+        }
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -52,6 +71,9 @@ struct Cli {
 
     #[arg(long, default_value = "raw")]
     proof: ProofType,
+
+    #[arg(long, default_value = "sha256")]
+    hash: HashAlgorithmCli,
 }
 
 #[tokio::main]
@@ -66,6 +88,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         InputType::String => args.message.into_bytes(),
     };
 
+    let hash_algorithm: HashAlgorithm = args.hash.into();
+
+    let max_difficulty = hash_algorithm.max_difficulty();
+    assert!(
+        args.difficulty <= max_difficulty,
+        "Difficulty cannot exceed {}",
+        max_difficulty
+    );
+
     if message.len() < 2048 {
         info!("Message: 0x{}", hex::encode(&message));
     }
@@ -75,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let nonce = if args.only_prove.is_some() {
         args.only_prove.unwrap()
     } else {
-        search_nonce(&message, args.difficulty, Some(args.search))
+        search_nonce(&message, args.difficulty, Some(args.search), hash_algorithm)
     };
     info!("Nonce: {}", nonce);
 
@@ -88,6 +119,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     stdin.write(&message);
     stdin.write(&nonce);
     stdin.write(&args.difficulty);
+    stdin.write(&hash_algorithm);
 
     let client = ProverClient::from_env().await;
     let pk = client.setup(ELF).await?;
@@ -108,6 +140,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let public = proof.public_values.read::<HashCashPublicValues>();
     assert!(public.is_valid, "The nonce is invalid");
+    assert!(public.message == message, "Message mismatch");
+    assert_eq!(public.difficulty, args.difficulty, "Difficulty mismatch");
+    assert_eq!(
+        public.hash_algorithm, hash_algorithm,
+        "Hash algorithm mismatch"
+    );
 
     info!("Verified successfully!");
 
@@ -125,7 +163,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         let private_json = serde_json::json!({
             "nonce": nonce,
-            "hash": hex::encode(calc_hash(&message, nonce)),
+            "hash": hex::encode(calc_hash(&message, nonce, hash_algorithm)),
+            "hash_algorithm": hash_algorithm.as_str(),
         });
 
         std::fs::write(public_path, public_json.to_string())?;
