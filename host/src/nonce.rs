@@ -1,12 +1,13 @@
 use std::{
     sync::{
+        Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc, Arc,
+        mpsc,
     },
     thread,
 };
 
-use hashcash_lib::{check_hash, HashAlgorithm};
+use hashcash_lib::{HashAlgorithm, check_hash};
 use log::info;
 use sha2::{Digest, Sha256, Sha512};
 use sha3::{Keccak256, Keccak512};

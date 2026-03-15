@@ -1,7 +1,7 @@
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 
-use hashcash_lib::{calc_hash, check_hash, public_values::HashCashPublicValues, HashAlgorithm};
+use hashcash_lib::{HashAlgorithm, calc_hash, check_hash, public_values::HashCashPublicValues};
 
 fn main() {
     // inputs

@@ -127,7 +127,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let public = proof.public_values.read::<HashCashPublicValues>();
     assert!(public.is_valid, "The nonce is invalid");
-    assert_eq!(public.hash_algorithm, hash_algorithm, "Hash algorithm mismatch");
+    assert_eq!(
+        public.hash_algorithm, hash_algorithm,
+        "Hash algorithm mismatch"
+    );
 
     info!("Verified successfully!");
 
